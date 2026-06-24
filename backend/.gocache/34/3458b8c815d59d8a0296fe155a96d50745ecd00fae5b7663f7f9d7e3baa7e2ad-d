@@ -1,0 +1,3 @@
+./migrations.go
+./postgres.go
+./seed.go

@@ -1,0 +1,10 @@
+./conn.go
+./conn_check_dummy.go
+./conn_state.go
+./global_time_cache.go
+./hooks.go
+./pool.go
+./pool_single.go
+./pool_sticky.go
+./pubsub.go
+./want_conn.go
