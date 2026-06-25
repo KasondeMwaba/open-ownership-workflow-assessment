@@ -4,7 +4,6 @@ Assignment B implementation: a two-sided submission and approval workflow with s
 
 ## Stack
 
-- Backend: Go, Echo, GORM, JWT auth
 - Frontend: React, TypeScript, Tailwind CSS, Vite
 - Data: PostgreSQL
 - Cache: Redis for dashboard metrics
@@ -31,11 +30,18 @@ Real secrets should live in `.env` or deployment secret management, not in commi
 
 Demo login details:
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Requester | requester@example.com | password |
-| Reviewer | reviewer@example.com | password |
-| Admin | admin@example.com | password |
+For the Requester use below login credentials:
+Email:requester@example.com
+Password:password 
+
+For the Reviewer use below login credentials:
+Email:reviewer@example.com
+Password:password 
+
+For the Admin use below login credentials:
+Email:admin@example.com
+Password:password
+
 
 ## What to Review
 
@@ -137,14 +143,6 @@ backend/
     repositories/
     services/
     handlers/
-    routes/
-      routes.go
-      auth_routes.go
-      admin_routes.go
-      audit_routes.go
-      dashboard_routes.go
-      submission_routes.go
-    dto/
     cache/
     database/
 ```
@@ -152,8 +150,6 @@ backend/
 The backend separates responsibilities intentionally:
 
 - `handlers`: HTTP parsing, status codes, routing, response shape.
-- `routes`: route registration split by API area, with `routes.go` coordinating the domain route files.
-- `dto`: request/response payload shapes used at the HTTP boundary.
 - `services`: business rules, validation, permissions, workflow orchestration.
 - `repositories`: GORM/database access and scoped queries.
 - `workflow`: status definitions and transition rules.
