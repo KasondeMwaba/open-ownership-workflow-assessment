@@ -4,7 +4,7 @@ Assignment B implementation: a two-sided submission and approval workflow with s
 
 ## Stack
 
-- Backend: Go, chi, GORM, JWT auth
+- Backend: Go, Echo, GORM, JWT auth
 - Frontend: React, TypeScript, Tailwind CSS, Vite
 - Data: PostgreSQL
 - Cache: Redis for dashboard metrics
@@ -137,6 +137,14 @@ backend/
     repositories/
     services/
     handlers/
+    routes/
+      routes.go
+      auth_routes.go
+      admin_routes.go
+      audit_routes.go
+      dashboard_routes.go
+      submission_routes.go
+    dto/
     cache/
     database/
 ```
@@ -144,6 +152,8 @@ backend/
 The backend separates responsibilities intentionally:
 
 - `handlers`: HTTP parsing, status codes, routing, response shape.
+- `routes`: route registration split by API area, with `routes.go` coordinating the domain route files.
+- `dto`: request/response payload shapes used at the HTTP boundary.
 - `services`: business rules, validation, permissions, workflow orchestration.
 - `repositories`: GORM/database access and scoped queries.
 - `workflow`: status definitions and transition rules.

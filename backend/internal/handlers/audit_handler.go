@@ -1,21 +1,23 @@
 package handlers
 
-import "net/http"
+import (
+	"net/http"
 
-func (api API) listVisibleAudit(w http.ResponseWriter, r *http.Request) {
-	events, err := api.audit.ListVisibleEvents(r.Context(), currentUser(r))
+	"github.com/labstack/echo/v4"
+)
+
+func (api API) listVisibleAudit(c echo.Context) error {
+	events, err := api.audit.ListVisibleEvents(c.Request().Context(), currentUser(c))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return writeError(c, http.StatusInternalServerError, err.Error())
 	}
-	writeJSON(w, http.StatusOK, events)
+	return writeJSON(c, http.StatusOK, events)
 }
 
-func (api API) listSystemAudit(w http.ResponseWriter, r *http.Request) {
-	events, err := api.audit.ListSystemEvents(r.Context(), currentUser(r))
+func (api API) listSystemAudit(c echo.Context) error {
+	events, err := api.audit.ListSystemEvents(c.Request().Context(), currentUser(c))
 	if err != nil {
-		writeServiceError(w, err)
-		return
+		return writeServiceError(c, err)
 	}
-	writeJSON(w, http.StatusOK, events)
+	return writeJSON(c, http.StatusOK, events)
 }

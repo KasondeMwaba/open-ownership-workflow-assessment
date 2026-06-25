@@ -7,37 +7,36 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 
+	"openownership-workflow/backend/internal/dto"
+	"openownership-workflow/backend/internal/models"
 	"openownership-workflow/backend/internal/services"
-	"openownership-workflow/backend/internal/workflow"
 )
 
-func (api API) listSubmissions(w http.ResponseWriter, r *http.Request) {
+func (api API) listSubmissions(c echo.Context) error {
+	r := c.Request()
 	query := r.URL.Query()
 	if query.Get("page") != "" || query.Get("pageSize") != "" {
 		page := parsePositiveInt(query.Get("page"), 1)
 		pageSize := parsePositiveInt(query.Get("pageSize"), 10)
-		result, err := api.submissions.ListPage(r.Context(), currentUser(r), query.Get("status"), page, pageSize)
+		result, err := api.submissions.ListPage(r.Context(), currentUser(c), query.Get("status"), page, pageSize)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return writeError(c, http.StatusInternalServerError, err.Error())
 		}
-		writeJSON(w, http.StatusOK, map[string]any{
-			"items":    result.Items,
-			"total":    result.Total,
-			"page":     result.Page,
-			"pageSize": result.PageSize,
+		return writeJSON(c, http.StatusOK, dto.PaginatedResponse[models.Submission]{
+			Items:    result.Items,
+			Total:    result.Total,
+			Page:     result.Page,
+			PageSize: result.PageSize,
 		})
-		return
 	}
-	items, err := api.submissions.List(r.Context(), currentUser(r), query.Get("status"))
+	items, err := api.submissions.List(r.Context(), currentUser(c), query.Get("status"))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return writeError(c, http.StatusInternalServerError, err.Error())
 	}
-	writeJSON(w, http.StatusOK, items)
+	return writeJSON(c, http.StatusOK, items)
 }
 
 func parsePositiveInt(value string, fallback int) int {
@@ -51,97 +50,87 @@ func parsePositiveInt(value string, fallback int) int {
 	return parsed
 }
 
-func (api API) getSubmission(w http.ResponseWriter, r *http.Request) {
-	item, err := api.submissions.Get(r.Context(), chi.URLParam(r, "id"), currentUser(r))
+func (api API) getSubmission(c echo.Context) error {
+	item, err := api.submissions.Get(c.Request().Context(), c.Param("id"), currentUser(c))
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			status = http.StatusNotFound
 		}
-		writeError(w, status, "submission not found")
-		return
+		return writeError(c, status, "submission not found")
 	}
-	writeJSON(w, http.StatusOK, item)
+	return writeJSON(c, http.StatusOK, item)
 }
 
-func (api API) createSubmission(w http.ResponseWriter, r *http.Request) {
-	user := currentUser(r)
+func (api API) createSubmission(c echo.Context) error {
+	user := currentUser(c)
 	if !user.HasPermission("submissions:create") {
-		writeError(w, http.StatusForbidden, "missing submissions:create permission")
-		return
+		return writeError(c, http.StatusForbidden, "missing submissions:create permission")
 	}
-	payload, ok := api.readSubmissionPayload(w, r)
+	payload, ok, err := api.readSubmissionPayload(c)
 	if !ok {
-		return
+		return err
 	}
-	item, err := api.submissions.Create(r.Context(), user, payload)
+	item, err := api.submissions.Create(c.Request().Context(), user, payload)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errors.Is(err, services.ErrInvalidSubmission) {
 			status = http.StatusBadRequest
 		}
-		writeError(w, status, err.Error())
-		return
+		return writeError(c, status, err.Error())
 	}
-	writeJSON(w, http.StatusCreated, item)
+	return writeJSON(c, http.StatusCreated, item)
 }
 
-func (api API) updateSubmission(w http.ResponseWriter, r *http.Request) {
-	payload, ok := api.readSubmissionPayload(w, r)
+func (api API) updateSubmission(c echo.Context) error {
+	payload, ok, err := api.readSubmissionPayload(c)
 	if !ok {
-		return
+		return err
 	}
-	item, err := api.submissions.Update(r.Context(), chi.URLParam(r, "id"), currentUser(r), payload)
+	item, err := api.submissions.Update(c.Request().Context(), c.Param("id"), currentUser(c), payload)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+		return writeError(c, http.StatusBadRequest, err.Error())
 	}
-	writeJSON(w, http.StatusOK, item)
+	return writeJSON(c, http.StatusOK, item)
 }
 
-func (api API) transitionSubmission(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Status  workflow.Status `json:"status"`
-		Comment string          `json:"comment"`
+func (api API) transitionSubmission(c echo.Context) error {
+	var payload dto.TransitionSubmissionRequest
+	if err := readJSON(c, &payload); err != nil {
+		return writeError(c, http.StatusBadRequest, err.Error())
 	}
-	if err := readJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	item, err := api.submissions.Transition(r.Context(), chi.URLParam(r, "id"), currentUser(r), payload.Status, strings.TrimSpace(payload.Comment))
+	item, err := api.submissions.Transition(c.Request().Context(), c.Param("id"), currentUser(c), payload.Status, strings.TrimSpace(payload.Comment))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+		return writeError(c, http.StatusBadRequest, err.Error())
 	}
-	writeJSON(w, http.StatusOK, item)
+	return writeJSON(c, http.StatusOK, item)
 }
 
-func (api API) auditEvents(w http.ResponseWriter, r *http.Request) {
-	events, err := api.submissions.AuditEvents(r.Context(), chi.URLParam(r, "id"), currentUser(r))
+func (api API) auditEvents(c echo.Context) error {
+	events, err := api.submissions.AuditEvents(c.Request().Context(), c.Param("id"), currentUser(c))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "submission not found")
-		return
+		return writeError(c, http.StatusNotFound, "submission not found")
 	}
-	writeJSON(w, http.StatusOK, events)
+	return writeJSON(c, http.StatusOK, events)
 }
 
-func (api API) readSubmissionPayload(w http.ResponseWriter, r *http.Request) (services.SubmissionPayload, bool) {
-	var payload services.SubmissionPayload
-	if err := readJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return payload, false
+func (api API) readSubmissionPayload(c echo.Context) (services.SubmissionPayload, bool, error) {
+	var payload dto.SubmissionRequest
+	if err := readJSON(c, &payload); err != nil {
+		return services.SubmissionPayload{}, false, writeError(c, http.StatusBadRequest, err.Error())
 	}
 	if strings.TrimSpace(payload.Title) == "" {
-		writeError(w, http.StatusBadRequest, "title is required")
-		return payload, false
+		return services.SubmissionPayload{}, false, writeError(c, http.StatusBadRequest, "title is required")
 	}
 	if strings.TrimSpace(payload.Summary) == "" {
-		writeError(w, http.StatusBadRequest, "summary is required")
-		return payload, false
+		return services.SubmissionPayload{}, false, writeError(c, http.StatusBadRequest, "summary is required")
 	}
 	if len(payload.Data) == 0 || !json.Valid(payload.Data) {
-		writeError(w, http.StatusBadRequest, "data must be valid JSON")
-		return payload, false
+		return services.SubmissionPayload{}, false, writeError(c, http.StatusBadRequest, "data must be valid JSON")
 	}
-	return payload, true
+	return services.SubmissionPayload{
+		Title:   payload.Title,
+		Summary: payload.Summary,
+		Data:    payload.Data,
+	}, true, nil
 }

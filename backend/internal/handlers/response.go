@@ -1,21 +1,15 @@
 package handlers
 
-import (
-	"encoding/json"
-	"net/http"
-)
+import "github.com/labstack/echo/v4"
 
-func readJSON(r *http.Request, target any) error {
-	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(target)
+func readJSON(c echo.Context, target any) error {
+	return c.Bind(target)
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+func writeJSON(c echo.Context, status int, payload any) error {
+	return c.JSON(status, payload)
 }
 
-func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
+func writeError(c echo.Context, status int, message string) error {
+	return c.JSON(status, map[string]string{"error": message})
 }

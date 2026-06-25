@@ -1,12 +1,15 @@
 package handlers
 
-import "net/http"
+import (
+	"net/http"
 
-func (api API) dashboardStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := api.dashboard.Stats(r.Context(), currentUser(r))
+	"github.com/labstack/echo/v4"
+)
+
+func (api API) dashboardStats(c echo.Context) error {
+	stats, err := api.dashboard.Stats(c.Request().Context(), currentUser(c))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return writeError(c, http.StatusInternalServerError, err.Error())
 	}
-	writeJSON(w, http.StatusOK, stats)
+	return writeJSON(c, http.StatusOK, stats)
 }

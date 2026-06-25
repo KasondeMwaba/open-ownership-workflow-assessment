@@ -4,10 +4,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/cors"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
 	"openownership-workflow/backend/internal/config"
+	"openownership-workflow/backend/internal/routes"
 	"openownership-workflow/backend/internal/services"
 )
 
@@ -45,47 +46,51 @@ func NewRouter(deps Dependencies) http.Handler {
 		logger:      deps.Logger,
 	}
 
-	router := chi.NewRouter()
-	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{deps.Config.CORSOrigin},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+	router := echo.New()
+	router.HideBanner = true
+	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:     []string{deps.Config.CORSOrigin},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodOptions},
+		AllowHeaders:     []string{echo.HeaderAccept, echo.HeaderAuthorization, echo.HeaderContentType},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
 	router.Use(api.requestLogger)
 
-	router.Get("/healthz", api.health)
-	router.Post("/api/auth/login", api.login)
+	routes.RegisterPublic(router, routes.PublicRouteHandlers{
+		Health: api.health,
+		Login:  api.login,
+	})
 
-	router.Group(func(protected chi.Router) {
-		protected.Use(api.requireAuth)
-		protected.Use(api.auditActivity)
-		protected.Get("/api/me", api.me)
-		protected.Post("/api/auth/logout", api.logout)
-		protected.Get("/api/audit", api.listVisibleAudit)
-		protected.Get("/api/dashboard", api.dashboardStats)
-		protected.Get("/api/admin/users", api.listUsers)
-		protected.Post("/api/admin/users", api.createUser)
-		protected.Put("/api/admin/users/{id}", api.updateUser)
-		protected.Post("/api/admin/users/{id}/status", api.setUserStatus)
-		protected.Get("/api/admin/permissions", api.listPermissions)
-		protected.Post("/api/admin/permissions", api.createPermission)
-		protected.Get("/api/admin/roles", api.listRoles)
-		protected.Post("/api/admin/roles", api.createRole)
-		protected.Put("/api/admin/roles/{id}", api.updateRole)
-		protected.Get("/api/admin/audit", api.listSystemAudit)
-		protected.Get("/api/submissions", api.listSubmissions)
-		protected.Post("/api/submissions", api.createSubmission)
-		protected.Get("/api/submissions/{id}", api.getSubmission)
-		protected.Put("/api/submissions/{id}", api.updateSubmission)
-		protected.Post("/api/submissions/{id}/transition", api.transitionSubmission)
-		protected.Get("/api/submissions/{id}/audit", api.auditEvents)
+	protected := router.Group("")
+	protected.Use(api.requireAuth)
+	protected.Use(api.auditActivity)
+	routes.RegisterProtected(protected, routes.ProtectedRouteHandlers{
+		Me:                   api.me,
+		Logout:               api.logout,
+		ListVisibleAudit:     api.listVisibleAudit,
+		DashboardStats:       api.dashboardStats,
+		ListUsers:            api.listUsers,
+		CreateUser:           api.createUser,
+		UpdateUser:           api.updateUser,
+		SetUserStatus:        api.setUserStatus,
+		ListPermissions:      api.listPermissions,
+		CreatePermission:     api.createPermission,
+		ListRoles:            api.listRoles,
+		CreateRole:           api.createRole,
+		UpdateRole:           api.updateRole,
+		ListSystemAudit:      api.listSystemAudit,
+		ListSubmissions:      api.listSubmissions,
+		CreateSubmission:     api.createSubmission,
+		GetSubmission:        api.getSubmission,
+		UpdateSubmission:     api.updateSubmission,
+		TransitionSubmission: api.transitionSubmission,
+		SubmissionAudit:      api.auditEvents,
 	})
 
 	return router
 }
 
-func (api API) health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+func (api API) health(c echo.Context) error {
+	return writeJSON(c, http.StatusOK, map[string]string{"status": "ok"})
 }

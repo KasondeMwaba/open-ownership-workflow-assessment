@@ -5,17 +5,17 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/labstack/echo/v4"
+
+	"openownership-workflow/backend/internal/dto"
 	"openownership-workflow/backend/internal/services"
 )
 
-func (api API) login(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	if err := readJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+func (api API) login(c echo.Context) error {
+	r := c.Request()
+	var payload dto.LoginRequest
+	if err := readJSON(c, &payload); err != nil {
+		return writeError(c, http.StatusBadRequest, err.Error())
 	}
 	result, err := api.auth.Login(r.Context(), payload.Email, payload.Password)
 	if err != nil {
@@ -32,15 +32,15 @@ func (api API) login(w http.ResponseWriter, r *http.Request) {
 			reason = "account_disabled"
 		}
 		api.recordLoginAttempt(r, payload.Email, nil, false, reason)
-		writeError(w, status, message)
-		return
+		return writeError(c, status, message)
 	}
 	api.recordLoginAttempt(r, result.User.Email, &result.User.ID, true, "authenticated")
-	writeJSON(w, http.StatusOK, result)
+	return writeJSON(c, http.StatusOK, result)
 }
 
-func (api API) logout(w http.ResponseWriter, r *http.Request) {
-	user := currentUser(r)
+func (api API) logout(c echo.Context) error {
+	r := c.Request()
+	user := currentUser(c)
 	api.audit.RecordSessionEvent(r.Context(), services.SessionAuditInput{
 		ActorID:   &user.ID,
 		Email:     user.Email,
@@ -52,11 +52,11 @@ func (api API) logout(w http.ResponseWriter, r *http.Request) {
 		Reason:    "user_signed_out",
 		Metadata:  map[string]any{"method": r.Method, "path": r.URL.Path},
 	})
-	writeJSON(w, http.StatusOK, map[string]string{"status": "logged_out"})
+	return writeJSON(c, http.StatusOK, dto.LogoutResponse{Status: "logged_out"})
 }
 
-func (api API) me(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, currentUser(r))
+func (api API) me(c echo.Context) error {
+	return writeJSON(c, http.StatusOK, currentUser(c))
 }
 
 func (api API) recordLoginAttempt(r *http.Request, email string, actorID *string, success bool, reason string) {

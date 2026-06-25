@@ -3,67 +3,71 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/labstack/echo/v4"
 
+	"openownership-workflow/backend/internal/dto"
 	"openownership-workflow/backend/internal/services"
 )
 
-func (api API) listPermissions(w http.ResponseWriter, r *http.Request) {
-	permissions, err := api.access.ListPermissions(r.Context(), currentUser(r))
+func (api API) listPermissions(c echo.Context) error {
+	permissions, err := api.access.ListPermissions(c.Request().Context(), currentUser(c))
 	if err != nil {
-		writeServiceError(w, err)
-		return
+		return writeServiceError(c, err)
 	}
-	writeJSON(w, http.StatusOK, permissions)
+	return writeJSON(c, http.StatusOK, permissions)
 }
 
-func (api API) createPermission(w http.ResponseWriter, r *http.Request) {
-	var payload services.CreatePermissionInput
-	if err := readJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+func (api API) createPermission(c echo.Context) error {
+	var payload dto.CreatePermissionRequest
+	if err := readJSON(c, &payload); err != nil {
+		return writeError(c, http.StatusBadRequest, err.Error())
 	}
-	permission, err := api.access.CreatePermission(r.Context(), currentUser(r), payload)
+	permission, err := api.access.CreatePermission(c.Request().Context(), currentUser(c), services.CreatePermissionInput{
+		Name:        payload.Name,
+		Description: payload.Description,
+	})
 	if err != nil {
-		writeServiceError(w, err)
-		return
+		return writeServiceError(c, err)
 	}
-	writeJSON(w, http.StatusCreated, permission)
+	return writeJSON(c, http.StatusCreated, permission)
 }
 
-func (api API) listRoles(w http.ResponseWriter, r *http.Request) {
-	roles, err := api.access.ListRoles(r.Context(), currentUser(r))
+func (api API) listRoles(c echo.Context) error {
+	roles, err := api.access.ListRoles(c.Request().Context(), currentUser(c))
 	if err != nil {
-		writeServiceError(w, err)
-		return
+		return writeServiceError(c, err)
 	}
-	writeJSON(w, http.StatusOK, roles)
+	return writeJSON(c, http.StatusOK, roles)
 }
 
-func (api API) createRole(w http.ResponseWriter, r *http.Request) {
-	var payload services.CreateRoleInput
-	if err := readJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+func (api API) createRole(c echo.Context) error {
+	var payload dto.CreateRoleRequest
+	if err := readJSON(c, &payload); err != nil {
+		return writeError(c, http.StatusBadRequest, err.Error())
 	}
-	role, err := api.access.CreateRole(r.Context(), currentUser(r), payload)
+	role, err := api.access.CreateRole(c.Request().Context(), currentUser(c), services.CreateRoleInput{
+		Name:          payload.Name,
+		Description:   payload.Description,
+		PermissionIDs: payload.PermissionIDs,
+	})
 	if err != nil {
-		writeServiceError(w, err)
-		return
+		return writeServiceError(c, err)
 	}
-	writeJSON(w, http.StatusCreated, role)
+	return writeJSON(c, http.StatusCreated, role)
 }
 
-func (api API) updateRole(w http.ResponseWriter, r *http.Request) {
-	var payload services.UpdateRoleInput
-	if err := readJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+func (api API) updateRole(c echo.Context) error {
+	var payload dto.UpdateRoleRequest
+	if err := readJSON(c, &payload); err != nil {
+		return writeError(c, http.StatusBadRequest, err.Error())
 	}
-	role, err := api.access.UpdateRole(r.Context(), currentUser(r), chi.URLParam(r, "id"), payload)
+	role, err := api.access.UpdateRole(c.Request().Context(), currentUser(c), c.Param("id"), services.UpdateRoleInput{
+		Name:          payload.Name,
+		Description:   payload.Description,
+		PermissionIDs: payload.PermissionIDs,
+	})
 	if err != nil {
-		writeServiceError(w, err)
-		return
+		return writeServiceError(c, err)
 	}
-	writeJSON(w, http.StatusOK, role)
+	return writeJSON(c, http.StatusOK, role)
 }

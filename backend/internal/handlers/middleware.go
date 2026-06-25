@@ -1,70 +1,76 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/labstack/echo/v4"
 
 	"openownership-workflow/backend/internal/auth"
 	"openownership-workflow/backend/internal/models"
 	"openownership-workflow/backend/internal/services"
 )
 
-type contextKey string
+const userContextKey = "user"
 
-const userContextKey contextKey = "user"
-
-func (api API) requestLogger(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (api API) requestLogger(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
 		start := time.Now()
-		next.ServeHTTP(w, r)
+		err := next(c)
+		r := c.Request()
 		api.logger.Info("request", "method", r.Method, "path", r.URL.Path, "duration_ms", time.Since(start).Milliseconds())
-	})
+		return err
+	}
 }
 
-func (api API) requireAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (api API) requireAuth(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		r := c.Request()
 		header := r.Header.Get("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
-			writeError(w, http.StatusUnauthorized, "missing bearer token")
-			return
+			return writeError(c, http.StatusUnauthorized, "missing bearer token")
 		}
 		claims, err := auth.ParseToken(api.cfg.JWTSecret, strings.TrimPrefix(header, "Bearer "))
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "invalid token")
-			return
+			return writeError(c, http.StatusUnauthorized, "invalid token")
 		}
 		user, err := api.auth.FindUserByID(r.Context(), claims.UserID)
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "user no longer exists")
-			return
+			return writeError(c, http.StatusUnauthorized, "user no longer exists")
 		}
 		if !user.IsActive {
-			writeError(w, http.StatusForbidden, "account is disabled")
-			return
+			return writeError(c, http.StatusForbidden, "account is disabled")
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userContextKey, user)))
-	})
+		c.Set(userContextKey, user)
+		return next(c)
+	}
 }
 
-func (api API) auditActivity(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := currentUser(r)
-		recorder := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+func (api API) auditActivity(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		user := currentUser(c)
+		r := c.Request()
 		start := time.Now()
-		next.ServeHTTP(recorder, r)
+		err := next(c)
 		duration := time.Since(start).Milliseconds()
 		if shouldSkipActivityAudit(r.URL.Path) {
-			return
+			return err
+		}
+		statusCode := c.Response().Status
+		if statusCode == 0 {
+			statusCode = http.StatusOK
+			if err != nil {
+				statusCode = http.StatusInternalServerError
+			}
 		}
 		api.audit.RecordActivityEvent(r.Context(), services.ActivityAuditInput{
 			ActorID:    user.ID,
 			Method:     r.Method,
 			Path:       r.URL.Path,
 			Query:      r.URL.RawQuery,
-			StatusCode: recorder.statusCode,
-			Success:    recorder.statusCode < http.StatusBadRequest,
+			StatusCode: statusCode,
+			Success:    statusCode < http.StatusBadRequest,
 			DurationMs: duration,
 			IPAddress:  clientIP(r),
 			UserAgent:  r.UserAgent(),
@@ -74,24 +80,15 @@ func (api API) auditActivity(next http.Handler) http.Handler {
 				"referer":       r.Referer(),
 			},
 		})
-	})
-}
-
-type statusRecorder struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func (recorder *statusRecorder) WriteHeader(statusCode int) {
-	recorder.statusCode = statusCode
-	recorder.ResponseWriter.WriteHeader(statusCode)
+		return err
+	}
 }
 
 func shouldSkipActivityAudit(path string) bool {
 	return path == "/api/me"
 }
 
-func currentUser(r *http.Request) models.User {
-	user, _ := r.Context().Value(userContextKey).(models.User)
+func currentUser(c echo.Context) models.User {
+	user, _ := c.Get(userContextKey).(models.User)
 	return user
 }
