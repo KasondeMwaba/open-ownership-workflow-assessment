@@ -29,6 +29,8 @@ Docker Compose includes inline development defaults so reviewers can run the pro
 
 Real secrets should live in `.env` or deployment secret management, not in committed files.
 
+For hosted deployment notes, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
+
 Demo login details:
 
 For the Requester use below login credentials:
@@ -145,6 +147,8 @@ backend/
     repositories/
     services/
     handlers/
+    routes/
+    dto/
     cache/
     database/
 ```
@@ -152,6 +156,8 @@ backend/
 The backend separates responsibilities intentionally:
 
 - `handlers`: HTTP parsing, status codes, routing, response shape.
+- `routes`: endpoint registration split by API area.
+- `dto`: request/response payloads used at the HTTP boundary.
 - `services`: business rules, validation, permissions, workflow orchestration.
 - `repositories`: GORM/database access and scoped queries.
 - `workflow`: status definitions and transition rules.
