@@ -279,6 +279,20 @@ This project intentionally keeps workflow validation in the Go domain layer and 
 
 Redis is used as a small but visible production-style optimization: dashboard metrics are cached for 30 seconds and invalidated after writes.
 
+## Use of AI Tools
+
+I used AI tools during development, primarily ChatGPT/Codex, as a pair-programming assistant.
+
+AI assistance was used for:
+
+- Scaffolding and iterating on backend and frontend structure.
+- Reviewing implementation choices such as Echo routing, GORM models, DTOs, services, repositories, and audit trail design.
+- Debugging issues during local development and deployment setup.
+- Improving UI layout, workflow screens, documentation, and reviewer guidance.
+- Suggesting tests and verification steps.
+
+I personally reviewed, edited, and verified the submitted code. In particular, I checked the workflow rules, role and permission behavior, audit trail visibility, seeded account behavior, deployment configuration, and local build/test results. I understand the submitted implementation and can explain the backend services, frontend workflows, audit logging, permissions, and deployment setup.
+
 Key tradeoffs:
 
 - GORM `AutoMigrate` is used for assessment speed and portability. In production, I would use versioned migrations.
