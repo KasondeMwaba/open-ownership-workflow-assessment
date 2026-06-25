@@ -3,25 +3,50 @@ package database
 import (
 	"encoding/json"
 
+	"openownership-workflow/backend/internal/auth"
 	"openownership-workflow/backend/internal/models"
 	"openownership-workflow/backend/internal/workflow"
 
 	"gorm.io/gorm"
 )
 
-const demoPasswordHash = "$2a$10$BPMCXMVTIW07SipA06cqpuNmdOZhDNbS6LjtMAlwdxHi1d2GuZU5O"
+type SeedOptions struct {
+	Requester SeedAccount
+	Reviewer  SeedAccount
+	Admin     SeedAccount
+}
 
-func SeedDemoData(db *gorm.DB) error {
+type SeedAccount struct {
+	Name     string
+	Email    string
+	Password string
+}
+
+func SeedDemoData(db *gorm.DB, options SeedOptions) error {
 	if err := seedAccessControls(db); err != nil {
 		return err
 	}
 
-	users := []models.User{
-		{Name: "Amina Requester", Email: "requester@example.com", PasswordHash: demoPasswordHash, Role: workflow.Requester, IsActive: true},
-		{Name: "Noah Reviewer", Email: "reviewer@example.com", PasswordHash: demoPasswordHash, Role: workflow.Reviewer, IsActive: true},
-		{Name: "Sam Admin", Email: "admin@example.com", PasswordHash: demoPasswordHash, Role: workflow.Admin, IsActive: true},
+	users := []struct {
+		account SeedAccount
+		role    workflow.Role
+	}{
+		{account: options.Requester, role: workflow.Requester},
+		{account: options.Reviewer, role: workflow.Reviewer},
+		{account: options.Admin, role: workflow.Admin},
 	}
-	for _, user := range users {
+	for _, item := range users {
+		passwordHash, err := auth.HashPassword(item.account.Password)
+		if err != nil {
+			return err
+		}
+		user := models.User{
+			Name:         item.account.Name,
+			Email:        item.account.Email,
+			PasswordHash: passwordHash,
+			Role:         item.role,
+			IsActive:     true,
+		}
 		if err := db.Where("email = ?", user.Email).Assign(models.User{IsActive: true}).FirstOrCreate(&user).Error; err != nil {
 			return err
 		}
@@ -36,11 +61,11 @@ func SeedDemoData(db *gorm.DB) error {
 	}
 
 	var requester models.User
-	if err := db.Where("email = ?", "requester@example.com").First(&requester).Error; err != nil {
+	if err := db.Where("email = ?", options.Requester.Email).First(&requester).Error; err != nil {
 		return err
 	}
 	var reviewer models.User
-	if err := db.Where("email = ?", "reviewer@example.com").First(&reviewer).Error; err != nil {
+	if err := db.Where("email = ?", options.Reviewer.Email).First(&reviewer).Error; err != nil {
 		return err
 	}
 

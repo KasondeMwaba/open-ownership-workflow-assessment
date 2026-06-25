@@ -39,7 +39,23 @@ func main() {
 		logger.Error("run migrations", "error", err)
 		os.Exit(1)
 	}
-	if err := database.SeedDemoData(gormDB); err != nil {
+	if err := database.SeedDemoData(gormDB, database.SeedOptions{
+		Requester: database.SeedAccount{
+			Name:     cfg.Seed.Requester.Name,
+			Email:    cfg.Seed.Requester.Email,
+			Password: cfg.Seed.Requester.Password,
+		},
+		Reviewer: database.SeedAccount{
+			Name:     cfg.Seed.Reviewer.Name,
+			Email:    cfg.Seed.Reviewer.Email,
+			Password: cfg.Seed.Reviewer.Password,
+		},
+		Admin: database.SeedAccount{
+			Name:     cfg.Seed.Admin.Name,
+			Email:    cfg.Seed.Admin.Email,
+			Password: cfg.Seed.Admin.Password,
+		},
+	}); err != nil {
 		logger.Error("seed demo data", "error", err)
 		os.Exit(1)
 	}

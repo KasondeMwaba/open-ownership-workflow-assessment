@@ -12,6 +12,19 @@ type Config struct {
 	JWTSecret   string
 	CORSOrigin  string
 	LogLevel    slog.Level
+	Seed        SeedConfig
+}
+
+type SeedConfig struct {
+	Requester SeedAccount
+	Reviewer  SeedAccount
+	Admin     SeedAccount
+}
+
+type SeedAccount struct {
+	Name     string
+	Email    string
+	Password string
 }
 
 func Load() Config {
@@ -22,6 +35,23 @@ func Load() Config {
 		JWTSecret:   env("JWT_SECRET", "dev-only-change-me"),
 		CORSOrigin:  env("CORS_ORIGIN", "http://localhost:5173"),
 		LogLevel:    slog.LevelInfo,
+		Seed: SeedConfig{
+			Requester: SeedAccount{
+				Name:     env("SEED_REQUESTER_NAME", "Amina Requester"),
+				Email:    env("SEED_REQUESTER_EMAIL", "requester@example.com"),
+				Password: env("SEED_REQUESTER_PASSWORD", "password"),
+			},
+			Reviewer: SeedAccount{
+				Name:     env("SEED_REVIEWER_NAME", "Noah Reviewer"),
+				Email:    env("SEED_REVIEWER_EMAIL", "reviewer@example.com"),
+				Password: env("SEED_REVIEWER_PASSWORD", "password"),
+			},
+			Admin: SeedAccount{
+				Name:     env("SEED_ADMIN_NAME", "Sam Admin"),
+				Email:    env("SEED_ADMIN_EMAIL", "admin@example.com"),
+				Password: env("SEED_ADMIN_PASSWORD", "password"),
+			},
+		},
 	}
 }
 

@@ -4,6 +4,7 @@ Assignment B implementation: a two-sided submission and approval workflow with s
 
 ## Stack
 
+- Backend: Go, Echo, GORM, JWT auth
 - Frontend: React, TypeScript, Tailwind CSS, Vite
 - Data: PostgreSQL
 - Cache: Redis for dashboard metrics
@@ -42,6 +43,7 @@ For the Admin use below login credentials:
 Email:admin@example.com
 Password:password
 
+These demo accounts are seeded from environment variables. The values above are local defaults for reviewer convenience and can be overridden with `SEED_REQUESTER_*`, `SEED_REVIEWER_*`, and `SEED_ADMIN_*` variables.
 
 ## What to Review
 

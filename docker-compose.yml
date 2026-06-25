@@ -34,6 +34,15 @@ services:
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: change-this-for-production
       CORS_ORIGIN: http://localhost:5173
+      SEED_REQUESTER_NAME: ${SEED_REQUESTER_NAME:-Amina Requester}
+      SEED_REQUESTER_EMAIL: ${SEED_REQUESTER_EMAIL:-requester@example.com}
+      SEED_REQUESTER_PASSWORD: ${SEED_REQUESTER_PASSWORD:-password}
+      SEED_REVIEWER_NAME: ${SEED_REVIEWER_NAME:-Noah Reviewer}
+      SEED_REVIEWER_EMAIL: ${SEED_REVIEWER_EMAIL:-reviewer@example.com}
+      SEED_REVIEWER_PASSWORD: ${SEED_REVIEWER_PASSWORD:-password}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Sam Admin}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-password}
     ports:
       - "18080:8080"
     depends_on:
