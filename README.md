@@ -11,6 +11,16 @@ Assignment B implementation: a two-sided submission and approval workflow with s
 - Runtime: Docker Compose
 - Migrations: GORM `AutoMigrate` on API startup
 
+## Live Demo
+
+The hosted frontend is available at:
+
+```text
+https://open-ownership-workflow-assessment.vercel.app/login
+```
+
+Use the demo credentials below to test the requester, reviewer, and admin workflows.
+
 ## Quick Start
 
 ```bash

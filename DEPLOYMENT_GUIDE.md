@@ -6,6 +6,12 @@ This project can be deployed from one GitHub repository with separate hosting ta
 - Frontend on Vercel
 - PostgreSQL and Redis on Railway
 
+Hosted frontend:
+
+```text
+https://open-ownership-workflow-assessment.vercel.app/login
+```
+
 ## Repository Layout
 
 Use one repository and point each platform to the correct root directory.
