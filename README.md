@@ -293,8 +293,8 @@ AI assistance was used for:
 
 I personally reviewed, edited, and verified the submitted code. In particular, I checked the workflow rules, role and permission behavior, audit trail visibility, seeded account behavior, deployment configuration, and local build/test results. I understand the submitted implementation and can explain the backend services, frontend workflows, audit logging, permissions, and deployment setup.
 
-Key tradeoffs:
+Key implementation notes:
 
-- GORM `AutoMigrate` is used for assessment speed and portability. In production, I would use versioned migrations.
-- JWT logout records an audit event but does not server-side revoke tokens. In production, I would add refresh tokens or a token revocation list for high-security environments.
-- Some admin screens use frontend pagination because they are bounded in this exercise. The submission queue uses API pagination because it is the highest-growth workflow dataset.
+- GORM `AutoMigrate` is used to keep the assessment easy to run locally and in review environments. For a long-running production system, I would move to versioned migrations.
+- Logout is recorded in the session audit trail. For higher-security production deployments, I would add refresh tokens or server-side token revocation.
+- The highest-growth workflow list, submissions, uses API pagination. Smaller administration datasets use UI pagination in this assessment, with a clear path to backend pagination if those datasets grow.
